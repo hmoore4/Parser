@@ -1,0 +1,296 @@
+/*
+ * parser.y -- bison rules to generate parser for P-
+ *
+ * Hunter Moore
+ * Department of Computer Science
+ * Trinity College 
+ *
+ * Date: 10/16/19
+ * Modification History:
+ *
+ */
+
+%{ 
+#include "msg.h"
+
+%}
+
+%start program 
+
+%union {
+    int w;                 /* ICONST yylval.w = yytext(then convert this to int)*/
+    double r;              /* FCONST */
+    char *sb;              /* SCONST */
+    struct he *phe;        /* IDENT  */
+
+    /* more to be added during Phase 3 */
+}
+
+%token AMP ASGN BANG COLON COMMA DAMP DBAR DIV DOT EQ GE GT LBRACK LE 
+%token LPAREN LT MINUS NE PLUS RBRACK RPAREN SEMI STAR ARRAY BEGINN BOOL  
+%token ELSE ELIF END FALSE FOR FLOAT FUNCTION IF IN INT OF PROCEDURE PROGRAM
+%token READ RECORD RETURN THEN TRUE WHILE WRITE
+%token FCONST    
+%token ICONST
+%token IDENT
+%token SCONST
+%token STATEMENT
+%nonassoc ASGN
+%nonassoc DBAR
+%nonassoc DAMP
+%nonassoc EQ GE GT LE LT NE
+%left PLUS MINUS
+%left STAR DIV
+%right BANG
+
+%%
+
+
+program        :    PROGRAM IDENT decl_part body
+
+               |    PROGRAM error
+                    {
+                       yyerror(message[mnMissingIdent]);
+                    }
+                    decl_part body
+                    {
+                       yyerrok;
+                    }
+               ;
+
+decl_part      :  %empty
+								| variable_decl decl_part
+								| procedure_decl decl_part
+								| function_decl decl_part
+								;
+
+
+
+body					 : BEGINN statement_list END
+								| BEGINN error
+								{
+										yyerror(message[mnMissingStatement]);
+								}
+								END
+								| BEGINN statement_list error{
+									yyerror(message[mnMissingEnd]);
+								}
+								
+								{
+									yyerrok;
+									}
+							 ; 
+							 
+
+statement_list : statement_list statement 
+							 | statement
+							 ;
+							
+variable_decl  : IDENT COLON type
+							 | IDENT ASGN type
+							 | ident_list COLON type
+							 ;	
+							 
+							 
+procedure_decl : PROCEDURE IDENT LPAREN parameter_list RPAREN decl_part body
+								| PROCEDURE IDENT LPAREN RPAREN decl_part body
+								;
+						
+function_decl  : FUNCTION IDENT LPAREN parameter_list RPAREN COLON simple_type decl_part body
+								| FUNCTION IDENT LPAREN RPAREN COLON simple_type decl_part body
+								;
+
+
+parameter_list : ident_list COLON parameter_type
+								 | ident_list COLON parameter_type SEMI parameter_list
+								 |ident_list COLON parameter_type error
+								 {
+								 yyerror(message[mnMissingSemi]);
+								 } 
+								 parameter_list
+								;
+								
+parameter_type : simple_type
+								| IDENT
+								;
+
+type					 : simple_type
+								| IDENT
+								| ARRAY LBRACK index RBRACK OF type
+								| RECORD field_list END
+								;
+
+simple_type			: INT
+								| FLOAT
+								| BOOL
+								;
+								
+index						: ICONST COLON ICONST 
+								| ICONST COLON ICONST COMMA index
+								;
+								
+field_list			: ident_list COLON type
+								| ident_list COLON type field_list
+								;
+
+possible_ident  : IDENT
+								| AMP IDENT
+								;
+										
+ident_list			: possible_ident
+								| ident_list COMMA ident_list
+
+								;
+								
+statement				: %empty
+								| assignment_statement
+								| subroutine_call
+								| RETURN_statement
+								| FOR_statement
+								| WHILE_statement
+								| IF_statement
+								| READ_statement
+								| WRITE_statement
+								;
+								
+assignment_statement : variable ASGN expression
+											| variable error
+											{
+												yyerror(message[mnMissingAssignment]);
+											}
+											expression
+											;
+											
+											
+subroutine_call      : IDENT LPAREN RPAREN
+											| IDENT LPAREN expression_list RPAREN
+
+											;
+											
+RETURN_statement     : RETURN expression
+											;
+
+FOR_statement					: FOR IDENT IN expression COLON expression statement END
+											| FOR IDENT IN expression COLON expression statement_list END
+											;
+											
+WHILE_statement			: WHILE LPAREN expression RPAREN statement_list END
+
+										;
+										
+IF_statement				: IF LPAREN expression RPAREN THEN statement_list END
+										| IF LPAREN expression RPAREN THEN statement_list ELIF_part END
+										| IF LPAREN expression RPAREN THEN statement_list ELSE_part END
+										| IF LPAREN expression RPAREN THEN statement_list ELIF_part ELSE_part END
+										
+										| IF error
+										{
+											yyerror(message[mnMissingParen]);
+										} 
+										expression RPAREN THEN statement_list END
+										{
+                       yyerrok;
+                    }
+										| IF LPAREN expression error
+										 {
+											yyerror(message[mnMissingParen]);
+										} 
+										THEN statement_list END
+										;
+										
+ELSE_part						: ELSE statement
+										;
+										
+ELIF_part						: ELIF LPAREN expression RPAREN THEN statement
+										| ELIF LPAREN expression RPAREN THEN statement ELIF_part
+										;
+										
+WRITE_statement			: WRITE LPAREN SCONST RPAREN
+										| WRITE LPAREN SCONST COMMA expression_list RPAREN	
+										;
+										
+READ_statement			: READ LPAREN SCONST COMMA expression_list RPAREN 
+										| READ error
+											{
+											yyerror(message[mnMissingParen]);
+											} 
+											SCONST COMMA expression_list RPAREN
+											|READ LPAREN SCONST COMMA expression_list error
+											{
+											yyerror(message[mnMissingParen]);
+											} 
+
+										;					
+
+expression					: AND_expression
+										| AND_expression DBAR AND_expression
+										;
+										
+AND_expression			: logic_expression 
+										| logic_expression DAMP logic_expression
+										;
+										
+										
+logic_expression		: simple_expression
+										| simple_expression LT simple_expression
+										| simple_expression LE simple_expression
+										| simple_expression EQ simple_expression
+										| simple_expression NE simple_expression
+										| simple_expression GE simple_expression
+										| simple_expression GT simple_expression
+										;
+										
+simple_expression  : term
+										| PLUS term
+										| MINUS term
+										| term list_of_add_ops
+										;
+										
+list_of_add_ops			: PLUS term
+										| MINUS term
+										| PLUS term list_of_add_ops
+										| MINUS term list_of_add_ops
+										;
+										
+
+										
+term								: factor 
+										| factor STAR factor
+										| factor DIV factor
+										;
+										
+										
+factor							: constant
+										| variable
+										| subroutine_call
+										| LPAREN expression RPAREN
+										| BANG factor
+										;
+										
+variable						: IDENT 
+										| IDENT array_var
+										| IDENT rec_var
+										| IDENT array_var rec_var
+										;
+										
+										
+array_var						: LBRACK expression RBRACK
+										| LBRACK expression_list RBRACK
+										;
+										
+										
+rec_var							: DOT variable
+										| rec_var DOT variable	
+										;
+										
+										
+expression_list			: expression
+										| expression_list COMMA expression
+										;
+										
+constant						: ICONST
+										| FCONST
+										| TRUE
+										| FALSE
+										;
+%%

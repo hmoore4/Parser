@@ -1,0 +1,14 @@
+README
+
+My parser parses all input files properly.
+ 
+I have included errors such as missing end statment, missing semi colon (for procedural declarations with more than one type), and missing statements. These errors pop when I add the error. Also, I added missing parenthesis for certain statements. There were so many rules including parenthesis I thought it was a waste of time and would make my code messy to include it for every rule. But, read statements must include parenthesis or else a specific message will pop up. Also, if statements that do not have an elif or else part will pop a missing parenthesis message. Again, I can easily copy and paste this code all over the place but I don't want to clutter everything. Finally, missing assignments pop their own message. A = 0 works but A  0 will cause a Missing Assignment error.
+
+
+I could add more errors but this set is a proof of concept in my opinion.
+
+It parses A = 3 + 4 + 5 - 7 - 8 - 9 etc. It also parses 1 * 8 + 2 + 1 / 4 etc.
+
+Also, adding errors increased the amount of shift/reduce errors I have (by a lot).  
+
+The program parses to the end of the document no matter how many errors are seen

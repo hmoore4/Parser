@@ -1,0 +1,51 @@
+/*
+ * scanner.l -- a lexical analyzer for P-
+ *
+ * <Your name>
+ * Department of Computer Science
+ * Trinity College
+ *
+ * Date:
+ * Modification History:
+ *
+ */
+
+%{
+
+#include "scanner.h"
+
+%}
+
+D                        [0-9]
+
+%%
+						
+                        struct he *phe;
+                        char msg[MAX_MSG_LEN];
+                        char ch;
+                        int ret;
+
+" "                     |
+"\t"                    |
+"\f"                    ;
+"\n"                    cLine++;
+array|ARRAY             return(ARRAY);
+                        
+<RE for String>         {    
+                            yylval.sb = MakeString(yytext);
+                            return(SCONST);
+                        }
+
+<RE for Identifier>     {
+                            if ((phe = Lookup(yytext)) == NULL) {
+                                phe = Insert(yytext);
+                                yylval.phe = phe;
+                            }
+                            return(IDENT);
+                        }
+
+.                       {
+                            sprintf(msg, message[mnUnknownChar], yytext[0]);
+                            PrintErrMsg(msg);
+                        }
+%%
